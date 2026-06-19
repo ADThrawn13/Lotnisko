@@ -1,0 +1,48 @@
+import csv
+import os
+
+NAZWA_PLIKU = "logi_baterii.csv"
+
+NAGLOWKI = ["ID_LOGU", "ID_BATERII", "TEMPERATURA", "STATUS"]
+
+
+def zapisz_do_csv(wiersz_danych):
+
+    plik_istnieje = os.path.isfile(NAZWA_PLIKU)
+
+    try:
+        with open(NAZWA_PLIKU, mode='a', newline='', encoding='utf-8') as plik:
+            writer = csv.writer(plik)
+
+            if not plik_istnieje:
+                writer.writerow(NAGLOWKI)
+
+            writer.writerow(wiersz_danych)
+
+        print("\n[SUKCES] Dane zosta³y pomyœlnie zapisane do pliku CSV!")
+
+    except PermissionError:
+        print("\n" + "!" * 60)
+        print("[OSTRZE¯ENIE] Nie mo¿na zapisaæ danych!")
+        print(f"Plik '{NAZWA_PLIKU}' jest obecnie otwarty w innym programie (np. Excel).")
+        print("Zamknij program Excel i spróbuj ponownie, aby zapisaæ dane.")
+        print("!" * 60 + "\n")
+
+    except Exception as e:
+        print(f"\nWyst¹pi³ nieoczekiwany b³¹d podczas zapisu: {e}")
+
+
+def pobierz_dane_od_uzytkownika():
+    
+    print("--- ETAP 2: Wprowadzanie danych nowej baterii ---")
+    id_logu = input("Podaj ID_LOGU: ").strip()
+    id_baterii = input("Podaj ID_BATERII: ").strip()
+    temperatura = input("Podaj TEMPERATURÊ: ").strip()
+    status = input("Podaj STATUS: ").strip()
+
+    return [id_logu, id_baterii, temperatura, status]
+
+
+if __name__ == "__main__":
+    nowe_dane = pobierz_dane_od_uzytkownika()
+    zapisz_do_csv(nowe_dane)
