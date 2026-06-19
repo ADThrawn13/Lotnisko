@@ -1,0 +1,71 @@
+#Czêœæ 1
+
+class BatteryLog:
+
+    batt_id = 1 #zmienna wspólna dla wszystkich class do log id, aby zaczyna³y siê od 1
+
+    def __init__(self, id_baterii, temperatura_c):
+
+        # zadeklarowanie zmiennych w classie, domyœlnie string
+        self.log_id = BatteryLog.batt_id #nadawanie id_logu
+        BatteryLog.batt_id += 1
+        self.id_baterii = id_baterii
+        self.temperatura_c = temperatura_c
+
+        if self.temperatura_c > 60.0: #if czy temo przekracza
+            self.status = "PRZEGRZANA"
+        else:
+            self.status = "OK"
+
+    def __str__(self): #zwraca wyniki z funkcji, str wyœwietla siê po u¿yciu
+        return (f"LogID: {self.log_id}, "
+                f"Bateria: {self.id_baterii}, "
+                f"Temperatura: {self.temperatura_c}°C, "
+                f"Status: {self.status}")
+
+
+class LogManager:
+
+    def __init__(self):
+        self.pomiary = [] #pusta lista, w której bêd¹ pomairy
+
+    def dodaj_pomiar(self, id_baterii, temperatura_c):
+        log = BatteryLog(id_baterii, temperatura_c) #zmienna dwuparametrowa
+        self.pomiary.append(log)
+        return log
+
+    def pobierz_historie_baterii(self, id_baterii):
+        return [
+            log for log in self.pomiary
+            if log.id_baterii == id_baterii
+        ]
+
+    def pobierz_przegrzane(self):
+        return [
+            log for log in self.pomiary
+            if log.status == "PRZEGRZANA"
+        ]
+
+
+if __name__ == "__main__":
+    manager = LogManager()
+
+    # dodawanie elementów do wykonanania pomiarów
+    manager.dodaj_pomiar("BAT-01", 45.5)
+    manager.dodaj_pomiar("BAT-02", 58.0)
+    manager.dodaj_pomiar("BAT-03", 72.3)  # przegrzana
+    manager.dodaj_pomiar("BAT-01", 63.7)  # przegrzana
+    manager.dodaj_pomiar("BAT-04", 39.2)
+
+    print("LISTA ALARMÓW")
+    przegrzane = manager.pobierz_przegrzane()
+
+    for log in przegrzane:
+        print(log)
+
+    print("\nHISTORIA BAT-01")
+    historia = manager.pobierz_historie_baterii("BAT-01")
+
+    for log in historia:
+        print(log)
+
