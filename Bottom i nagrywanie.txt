@@ -1,0 +1,35 @@
+Bottom i nagrywanie
+
+def run_bottom_video(drone):
+    while True:
+        # get the most recent frame
+        frame = drone.get_frame_read().frame
+        #crop the frame to only show non_noise part
+        crop_img = frame[0:240, 0:320]
+        #show the cropped image
+        cv2.imshow('Crop img', crop_img)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyAllWindows()
+
+def record_tello_video_stream(frame_read: Tello.background_frame_read, out: cv2.VideoWriter):
+
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    frame_read = drone.get_frame_read()
+    H,W,_ = frame_read.frame.shape
+    out = cv2.VideoWriter(f"{timestamp}_tello_recording.mp4", cv2.VideoWriter_fourcc(*"mp4v"),30,(W,H))
+
+    try:
+        while True:
+            frame = frame_read.frame
+            out.write(frame)
+            cv2.imshow('Frmae', frame)
+
+            if cv2.waitKey(50) & 0xFF == ord('q'):
+                break
+    except Exception as e:
+        print(f"Error in tello webcam:{e}")
+    finally:
+        cv2.destroyAllWindows()
+        out.release()
+
