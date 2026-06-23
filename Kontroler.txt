@@ -1,0 +1,223 @@
+Kontroler, streamon,hudu
+
+from djitellopy import Tello
+import time
+import cv2
+import numpy as np
+import threading
+from tkinter import *
+from PIL import ImageTk, Image
+import pygame
+import os
+from datetime import datetime
+
+
+DEADZONE = 15
+
+class App:
+    def __init__(self):
+        self.root = Tk()
+        self.root.title("SHOW")
+        self.root.minsize(800,600)
+
+        self.cap_lbl = Label(self.root)
+        self.cap_lbl.pack(anchor = "center")
+
+        self.drone = Tello()
+        self.drone.connect()
+        self.drone.streamon()
+
+        self.in_air = False
+        self.running = True
+
+        self.w, self.h = 720, 480
+        self.frame = self.drone.get_frame_read()
+        self.radiomaster = None
+        self.indicators = Indicators(self.drone, self.w, self.h)
+
+    def convert_input(self, val):
+        value = int(val * 100)
+        if abs(value) < DEADZONE:
+            return 0
+        return max(-100, min(100, value))
+
+    def takeoff_land(self):
+        if self.drone.in_air:
+            threading.Thread(target = lambda: self.drone.land()).start()
+        else:
+            threading.Thread(target=lambda: self.drone.takeoff()).start()
+
+    def update_joystick(self):
+
+        pygame.init()
+        pygame.joystick.init()
+        while self.running:
+            if pygame.joystick.get_count() > 0:
+                self.radiomaster = pygame.joystick.Joystick(0)
+                self.radiomaster.init()
+                print(f"Po³¹czono z kontrolerem: {self.radiomaster.get_name()}")
+                break
+            time.sleep(1)
+
+        while self.running:
+            try:
+                pygame.event.pump()
+
+                roll = self.convert_input(self.radiomaster.get_axis(0))
+                pitch = self.convert_input(self.radiomaster.get_axis(1))
+                throttle = self.convert_input(self.radiomaster.get_axis(2))
+                yaw = self.convert_input(self.radiomaster.get_axis(3))
+
+                if self.radiomaster.get_button(0):
+                    if not self.in_air:
+                        print("\nTELLO - START")
+                        threading.Thread(target = self.drone.takeoff).start()
+                        self.in_air = True
+                    else:
+                        print('\nTello - LAND')
+                        threading.Thread(target = self.drone.land).start()
+                        self.in_air = False
+                    time.sleep(1)
+
+                if self.radiomaster.get_button(1):
+                    current_frame = self.frame.frame
+                    if current_frame is not None:
+                        self.take_picture(current_frame)
+                    time.sleep(1)
+
+                if self.in_air:
+                    self.drone.send_rc_control(roll, pitch, throttle, yaw)
+                time.sleep(0.05)
+
+            except Exception as e:
+                print(f"B³¹d pêtli kontrolera: {e}")
+                time.sleep(0.1)
+    def tello_video(self):
+
+        if not self.running:
+            return
+        try:
+            frame = self.frame.frame
+            if frame is None:
+                self.cap_lbl.after(5, self.tello_video())
+                return
+
+            frame = cv2.resize(frame,(self.w,self.h))
+
+            self.indicators.draw_battery_indicator(frame)
+            self.indicators.draw_telemery_indicator(frame)
+
+            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(cv2image)
+            imgtk = ImageTk.PhotoImage(image = img)
+
+            self.cap_lbl.configure(image = imgtk)
+            self.cap_lbl.image = imgtk
+            self.cap_lbl.after(5,self.tello_video)
+
+        except Exception as video_Exception:
+            print(f"Error in tello_video:{video_Exception}")
+
+    def take_picture(self, frame: np.ndarray):
+        def _save():
+            try:
+                if not os.path.exists('pictures'):
+                    os.mkdir('pictures')
+                now = datetime.now().strftime("%Y%m%d-%H%M%S")
+                filename = f"pictures/IMG.{now}.png"
+
+                cv2.imwrite(filename, frame)
+                print(f'Saved picture: {filename}')
+            except Exception as take_picture_error:
+                print(f"Error in tello take_picture:{take_picture_error}")
+
+        threading.Thread(target=_save, daemon=True).start()
+
+    def run_app(self):
+        try:
+            self.tello_video()
+            threading.Thread(target = self.update_joystick,daemon = True).start()
+            self.root.mainloop()
+        except Exception as e:
+            print(f"Error in app:{e}")
+        finally:
+            self.cleanup()
+
+    def cleanup(self) ->None:
+        try:
+            print("Cleaning up")
+            self.running = False
+            self.indicators.update = False
+            if self.in_air:
+                print("\nEmergency Landing")
+                self.drone.land()
+            self.drone.streamoff()
+            self.drone.end()
+            self.root.destroy()
+            exit()
+        except Exception as e:
+            print(f"Error in cleanup:{e}")
+
+class Indicators:
+    def __init__(self,drone,w,h):
+
+        self.update = False
+        self.w = w
+        self.h = h
+        self.drone = drone
+
+        self.battery = 0
+        self.pitch = 0
+        self.roll = 0
+        self.yaw = 0
+        self.height = 0
+
+        threading.Thread(target = self.update_indicators(), daemon = True).start()
+
+    def update_indicators(self):
+        self.update = True
+        while self.update:
+            try:
+                self.battery = self.drone.get_battery()
+                self.pitch = self.drone.get_pitch()
+                self.roll = self.drone.get_roll()
+                self.yaw = self.drone.get_yaw()
+                self.height = self.drone.get_height()
+                print("updating indicators")
+                print(f"battery: {self.battery}%")
+            except Exception as e:
+                print(f"Error in update_indicators:{e}")
+            time.sleep(1)
+
+    def draw_battery_indicator(self, frame) -> None:
+        cv2.rectangle(frame, (self.w // 128+3, self.h // 32+29), (self.w // 128+52, self.h // 32+51),
+                      (255,255,255), -1)
+        cv2.rectangle(frame, (self.w // 128 + 52, self.h // 32 + 35), (self.w // 128 + 55, self.h // 32 + 45),
+                      (255, 255, 255), -1)
+
+        if self.battery >= 70:
+            color = (0, 255 , 0) #Zielony
+        elif 40 <= self.battery < 70:
+            color = (255,255,0) #¯ó³ty
+        else:
+            color = (0,0,255) #Czerowny
+        bars = min(10,max(1, self.battery //10))
+        for i in range(bars):
+            x_pos = self.w // 128 + 5 + (i * 5)
+            cv2.line(frame, (x_pos,self.h // 32 + 30), (x_pos,self.h // 32 + 50), color,2)
+
+        cv2.putText(frame, f"{self.battery}%", (self.w // 128 + 60, self.h // 32 + 45),
+                    cv2.FONT_HERSHEY_SCRIPT_COMPLEX, .5, (43, 157, 255), 1)
+
+    def draw_telemery_indicator(self, frame) -> None:
+        y_position = self.h - 460
+        text = f"Pitch: {self.pitch}° | Roll: {self.roll}° | Yaw: {self.yaw}° | height: {self.height} m |"
+        cv2.rectangle(frame, (0, self.h - 440), (self.w, self.h), (0, 0, 0), -1)
+        cv2.putText(frame,text, (20,y_position),cv2.FONT_HERSHEY_SCRIPT_COMPLEX, 0.45, (255,255,255),
+                    1, cv2.LINE_AA)
+
+if __name__ == "__main__":
+    app = App()
+    app.run_app()
+
+
