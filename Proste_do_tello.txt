@@ -1,0 +1,74 @@
+Proste programy do tello;
+def basic_routine(drone):
+    i = 0
+
+    print("Connected to Tello Drone")
+    print(f"Battery level: {drone.get_battery()}%")
+
+    drone.takeoff()
+    while i < 6:
+        i+= 1
+        drone.move_forward(30)
+        drone.rotate_clockwise(90)
+
+    drone.land()
+
+def get_orientation_data(drone):
+    #print all the orientation data from the TELLOEDU.
+
+    pitch = 'Pitch: '+ str(drone.get_pitch()) + '°'
+    roll = 'Roll: '+ str(drone.get_roll()) + '°'
+    yaw = 'Yaw: ' + str(drone.get_yaw()) + '°'
+
+    vgx = 'Speed X: ' + str(0.1 * drone.get_speed_x()) + 'm/s'
+    vgy = 'Speed Y: ' + str(0.1 * drone.get_speed_y()) + 'm/s'
+    vgz = 'Speed Z: ' + str(0.1 * drone.get_speed_z()) + 'm/s'
+
+    agx = 'Acceleration X: ' + str(drone.get_acceleration_x()) + 'cm/s^2'
+    agy = 'Acceleration Y: ' + str(drone.get_acceleration_y()) + 'cm/s^2'
+    agz = 'Acceleration Z: ' + str(drone.get_acceleration_z()) + 'cm/s^2'
+
+    print(f"{pitch}\n{roll}\n{yaw}\n{vgx}\n{vgy}\n{vgz}\n{agx}\n{agy}\n{agz}")
+
+def get_status_data(drone):
+    #Get all variables
+    activityMotorTime = drone.get_flight_time()
+    battery = drone.get_battery()
+    height = drone.get_height()
+    tof = drone.get_distance_tof() #'cm'
+    templ = drone.get_lowest_temperature()
+    temph = drone.get_highest_temperature()
+    avqTemp = drone.get_temperature()
+    barometer = drone.get_barometer()
+    return activityMotorTime, battery, height, tof, templ, temph, avqTemp, barometer
+
+def tello_video_with_extra_data(drone):
+
+    while True:
+        get_orientation_data(drone)
+        frame = drone.get_frame_read().frame
+
+        activityMotorTime, battery, height, tof, templ, temph, avqTemp, barometer = get_status_data(drone)
+
+        cv2.putText(frame,'Activew Motor Time: ' + str(activityMotorTime) + 'seconds', (10,20),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL,1,(0,234,255),1,2)
+        cv2.putText(frame, 'Battery: ' + str(battery) + '%', (10, 45),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 234, 255), 1, 2)
+        cv2.putText(frame, 'Height: ' + str(height) + 'cm', (10, 70),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 234, 255), 1, 2)
+        cv2.putText(frame, 'Tof: ' + str(tof) + 'cm', (10, 95),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 234, 255), 1, 2)
+        cv2.putText(frame, 'The Lowest Temperature: ' + str(templ) + '°C', (10, 120),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 234, 255), 1, 2)
+        cv2.putText(frame, 'The Hieghest Temperature: ' + str(templ) + '°C', (10, 145),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 234, 255), 1, 2)
+        cv2.putText(frame, 'The Average Temperature: ' + str(avqTemp) + '°C', (10, 170),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 234, 255), 1, 2)
+        cv2.putText(frame, 'Barometer: ' + str(avqTemp) + 'cm', (10, 195),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 234, 255), 1, 2)
+
+        cv2.imshow('Frame',frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyAllWindows()
+
