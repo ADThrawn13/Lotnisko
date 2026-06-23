@@ -1,0 +1,60 @@
+Latanie automatyczne z nagrywaniem
+
+import threading
+from djitellopy import tello
+import cv2
+
+stream_ready = threading.Event()
+
+def flight_routine(drone):
+
+    stream_ready.wait()
+
+    drone.takeoff()
+    print("Takeoff.\n")
+    drone.move_forward(20)
+    print("Move forward.\n")
+    drone.move_right(20)
+    print("Move right.\n")
+    drone.rotate_clockwise(90)
+    print("Rotate clockwise.\n")
+    drone.move_back(20)
+    print("Move backward.\n")
+    drone.move_left(20)
+    print("Move left.\n")
+    drone.rotate_counter_clockwise(270)
+    print("Rotate counter clockwise.\n")
+    drone.move_forward(20)
+    print("Move forward.\n")
+    drone.land()
+    print("land.\n")
+
+def stream_video(drone):
+    while True:
+        frame = drone.get_frame_read().frame
+        cv2.imshow("Frame", frame)
+
+        if not stream_ready.is_set():
+            stream_ready.set()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cv2.destroyAllWindows()
+
+def main():
+
+    drone = tello.Tello()
+    drone.connect()
+    drone.streamon()
+
+    print(f"battery: {drone.get_battery}%")
+
+    stream_thread = threading.Thread(target = stream_video, args = (drone,))
+    stream_thread.daemon = True
+    stream_thread.start()
+
+    flight_routine(drone)
+    drone.reboot()
+
+if __name__ == "__main__":
+    main()
+
