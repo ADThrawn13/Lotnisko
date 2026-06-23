@@ -1,0 +1,39 @@
+import cv2
+from datetime import datetime
+import os
+
+recordings_dir = os.path.join('recordings')
+if not os.path.exists(recordings_dir):
+    os.makedirs(recordings_dir)
+
+def record_over_webcam(chanell: int) -> None:
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        cap = cv2.VideoCapture(channel)
+        if not cap.isOpened():
+            print("Error opening camera. Please check if an external camera is connected.")
+            raise ValueError(
+                f"Error opening camera channel {channel}. Please check if an external camera is connected.")
+        out = cv2.VIDEOWRITER_PROP_RAW_VIDEO(
+            os.path.join(recordings_dir, f"{timestamp}_{channel}_webcam_recording.mp4"),
+            cv2.VideoWriter_fourcc(*'mp4v'), int(cap.get(cv2.CAP_PROP_FPS)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HIGH))
+        )
+        stream_video(cap, out)
+    except Exception as e:
+        print(f"Error in record_over_webcam:{e}")
+
+def stream_video(cap: cv2.VideoCapture,out:cv2.VideoWriter):
+    try:
+        while True:
+            ret, frame = cap.read()
+            out.write(frame)
+            cv2.imshow("Webcam - press 'q' to quit.", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    except Exception as e:
+        print(f"Error in record_over_webcam:{e}")
+    finally:
+        cap.release()
+        out.release()
+        cv2.destroyAllWindows()
+
