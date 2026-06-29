@@ -1,0 +1,107 @@
+import json
+import os
+
+class Flight:
+    licznik = 1
+
+    def __init__(self, model_drona: str,czas_minuty: int, data: str):
+        self.flight_id = Flight.licznik
+        Flight.licznik += 1
+        self.model_drona = model_drona
+        self.czas_minuty = czas_minuty
+        self.data = data
+
+    def __str__(self):
+        return (f"{self.flight_id}. "
+                f"{self.model_drona}: "
+                f"{self.czas_minuty} min, "
+                f"{self.data}")
+
+    def do_slownika(self):
+        return {
+            "flight_id": self.flight_id,
+            "model_drona": self.model_drona,
+            "czas_minuty": self.czas_minuty,
+            "data": self.data}
+
+class DroneManager:
+    def __init__(self):
+        self.loty = []
+
+    def dodaj_lot(self, model_drona, czas_minuty, data):
+        nowy_lot = Flight(model_drona, czas_minuty, data)
+        self.loty.append(nowy_lot)
+
+    def pobierz_wszystkie_loty(self):
+        return self.loty
+
+    def oblicz_calkowity_nalot(self, model_drona):
+        wszystkie_min = sum(lot.czas_minuty for lot in self.loty if lot.model_drona == model_drona)
+        return wszystkie_min/60
+
+    def pobierz_slownik_nalotu(self, model_drona):
+        return [lot for lot in self.loty if lot.model_drona == model_drona]
+
+    def zapisz_do_json(self, sciezka_pliku):
+        dane_do_zapisu = [lot.do_slownika() for lot in self.loty]
+        with open(sciezka_pliku, "w") as f:
+            json.dump(dane_do_zapisu, f, indent=4)
+
+    def czytaj_z_json(self, sciezka_pliku):
+        try:
+            with open(sciezka_pliku, 'r') as file:
+                dane = json.load(file)
+
+            self.loty = []
+            max_id = 0
+
+            for element in dane:
+                lot = Flight(
+                    model_drona=element["model_drona"],
+                    czas_minuty=element["czas_minuty"],
+                    data=element["data"]
+                )
+                lot.flight_id = element["flight_id"]
+                self.loty.append(lot)
+
+                if lot.flight_id > max_id:
+                    max_id = lot.flight_id
+
+            if max_id > 0:
+                Flight.licznik = max_id + 1
+
+        except FileNotFoundError:
+            print("Nie dzia³a")
+            with open(sciezka_pliku, 'w') as f:
+                json.dump([],f)
+
+
+if __name__ == "__main__":
+    plik_bazy = "loty_dronow.json"
+    manager = DroneManager()
+
+    manager.czytaj_z_json(plik_bazy)
+
+    historia_lotow = manager.pobierz_wszystkie_loty()
+    loty_modelu = manager.pobierz_slownik_nalotu("sratat")
+    calkowity_h = manager.oblicz_calkowity_nalot("Mavick 3")
+
+    if historia_lotow:
+        for one in historia_lotow:
+            print(one)
+
+    if loty_modelu:
+        for one in loty_modelu:
+            print(one)
+
+    if calkowity_h:
+        print(f"Ca³kowity nalot dla modelu FRAJER: {calkowity_h:.2f} godziny.")
+
+
+    nowy_model = input("Wska¿ model: ")
+    czas = input("Wska¿ czas lotu: ")
+    dzien = input("Wska¿ datê lotu: ")
+
+    manager.dodaj_lot(nowy_model, czas, dzien)
+    manager.zapisz_do_json(plik_bazy)
+
