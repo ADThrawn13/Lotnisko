@@ -1,0 +1,63 @@
+from datetime import datetime
+
+class Ticket:
+    licznik = 1
+
+    def __init__(self, tytul: str, opis: str, priorytet: str, status: str = "Nowy", data_utworzenia: str = None):
+        self.id = Ticket.licznik
+        Ticket.licznik += 1
+        self.tytul = tytul
+        self.opis = opis
+        self.priorytet = priorytet
+        self.status = status
+
+        if data_utworzenia is None:
+            self.data_utworzenia = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            self.data_utworzenia = data_utworzenia
+
+    def __str__(self):
+        return f"ID: {self.id} | Tytu³: {self.tytul} | Opis: {self.opis} | Priorytet: {self.priorytet} | Status: {self.status} | Utworzono: {self.data_utworzenia}"
+
+
+class TicketManager:
+    def __init__(self):
+        self.RAM = []
+
+    def dodaj_zgloszenie(self, tytul, opis, priorytet):
+        nowe_zgloszenie = Ticket(tytul, opis, priorytet)
+        self.RAM.append(nowe_zgloszenie)
+
+    def pobierz_wszystkie(self):
+        return self.RAM
+
+    def zmien_status(self, id_zgloszenia, nowy_status):
+        for ticket in self.RAM:
+            if ticket.id == id_zgloszenia:
+                ticket.status = nowy_status
+                return True
+        return False
+
+    def pobierz_wedlug_priorytetu(self, priorytet):
+        return [ticket for ticket in self.RAM if ticket.priorytet == priorytet]
+
+
+if __name__ == "__main__":
+    manager = TicketManager()
+
+    manager.dodaj_zgloszenie("komputer", "zalany kaw¹", "Niski")
+    manager.dodaj_zgloszenie("sieæ", "brak dostêpu dla wszystkich uczestników", "Œredni")
+    manager.dodaj_zgloszenie("energetyka", "brak pr¹du w kilku dzia³ach", "Wysoki")
+
+    manager.zmien_status(1, "W realizacji")
+
+
+    wszystko = manager.pobierz_wszystkie()
+    if wszystko:
+        for one in wszystko:
+            print(one)
+
+    wysokie = manager.pobierz_wedlug_priorytetu("Wysoki")
+    for one in wysokie:
+        print(one)
+

@@ -1,0 +1,113 @@
+from datetime import datetime
+import json
+import os
+
+class Ticket:
+    licznik = 1
+
+    def __init__(self, tytul: str, opis: str, priorytet: str, status: str = "Otwarty", data_utworzenia: str = None):
+        self.id = Ticket.licznik
+        Ticket.licznik += 1
+        self.tytul = tytul
+        self.opis = opis
+        self.priorytet = priorytet
+        self.status = status
+
+        if data_utworzenia is None:
+            self.data_utworzenia = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        else:
+            self.data_utworzenia = data_utworzenia
+
+    def __str__(self):
+        return f"{self.id}. {self.tytul}: {self.opis}, {self.priorytet}: {self.status}. {self.data_utworzenia}"
+
+    def do_slownika(self):
+        return {
+            "id": self.id,
+            "tytul": self.tytul,
+            "opis": self.opis,
+            "priorytet": self.priorytet,
+            "status": self.status,
+            "data_utworzenia": self.data_utworzenia
+        }
+
+
+class TicketManager:
+    def __init__(self):
+        self.RAM = []
+
+    def dodaj_zgloszenie(self, tytul, opis, priorytet):
+        nowe_zgloszenie = Ticket(tytul, opis, priorytet)
+        self.RAM.append(nowe_zgloszenie)
+
+    def pobierz_wszystkie(self):
+        return self.RAM
+
+    def zmien_status(self, id_zgloszenia, nowy_status):
+        for ticket in self.RAM:
+            if ticket.id == id_zgloszenia:
+                ticket.status = nowy_status
+                return True
+        return False
+
+    def pobierz_wedlug_priorytetu(self, priorytet):
+        return [ticket for ticket in self.RAM if ticket.priorytet == priorytet]
+
+    def zapisz_do_json(self, sciezka_pliku):
+        dane_do_zapisu = [ticket.do_slownika() for ticket in self.RAM]
+        with open(sciezka_pliku, "w") as f:
+            json.dump(dane_do_zapisu, f, indent=6)
+
+    def wczytaj_z_json(self, sciezka_pliku):
+        try:
+            with open(sciezka_pliku, 'r') as file:
+                dane = json.load(file)
+            
+            self.RAM = []
+            max_id = 0
+
+            for element in dane:
+                ticket = Ticket(
+                    tytul=element["tytul"],
+                    opis=element["opis"],
+                    priorytet=element["priorytet"],
+                    status=element["status"],
+                    data_utworzenia=element["data_utworzenia"]
+                )
+                ticket.id = element["id"]
+                self.RAM.append(ticket)
+
+                if ticket.id > max_id:
+                    max_id = ticket.id
+            
+            if max_id > 0:
+                Ticket.licznik = max_id + 1
+
+        except FileNotFoundError:
+            print("Nie dzia³a")
+            with open(sciezka_pliku, 'w') as f:
+                json.dump([], f)
+
+
+if __name__ == "__main__":
+    plik_bazy = "ticket.json"
+    manager = TicketManager()
+    manager.wczytaj_z_json(plik_bazy)
+
+    manager.dodaj_zgloszenie("komputer", "zalany kaw¹", "Niski")
+    manager.dodaj_zgloszenie("siec", "brak dostêpu dla wszystkich uczestników", "Œredni")
+    manager.dodaj_zgloszenie("energetyka", "brak pr¹du w kilku dzia³ach", "Wysoki")
+
+    wszystko = manager.pobierz_wszystkie()
+
+    manager.zmien_status(id_zgloszenia=1, nowy_status="W realizacji")
+    if wszystko:
+        for one in wszystko:
+            print(one)
+
+    nowy_tytul = input("Wska¿ tytul: ")
+    opis = input("Wska¿ opis: ")
+    priorytet = input("Wska¿ priorytet (Wysoki, Œredni, Niski): ")
+
+    manager.dodaj_zgloszenie(nowy_tytul, opis, priorytet)
+    manager.zapisz_do_json(plik_bazy)
