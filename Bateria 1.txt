@@ -1,0 +1,54 @@
+class BatteryLog:
+    _licznik_id = 1
+
+    def __init__(self, id_baterii: str, temperatura_c: float):
+        self.log_id = BatteryLog._licznik_id
+        BatteryLog._licznik_id += 1
+
+        self.id_baterii = id_baterii
+        self.temperatura_c = temperatura_c
+
+        if self.temperatura_c > 60.0:
+            self.status = "PRZEGRZANA"
+        else:
+            self.status = "OK"
+
+    def __str__(self):
+        return f"Log ID: {self.log_id}, Bateria: {self.id_baterii}, Temp: {self.temperatura_c}°C, Status: {self.status}"
+
+class LogManager:
+
+    def __init__(self):
+        self.pomiary = []
+
+    def dodaj_pomiar(self, id_baterii: str, temperatura_c: float):
+        nowy_wpis = BatteryLog(id_baterii, temperatura_c)
+        self.pomiary.append(nowy_wpis)
+
+    def pobierz_historie_baterii(self, id_baterii: str):
+        return [pomiar for pomiar in self.pomiary if pomiar.id_baterii == id_baterii]
+
+    def pobierz_przegrzane(self):
+        return [pomiar for pomiar in self.pomiary if pomiar.status == "PRZEGRZANA"]
+
+if __name__ == "__main__":
+    manager = LogManager()
+
+    manager.dodaj_pomiar("BAT-01", 45.5)
+    manager.dodaj_pomiar("BAT-01", 62.1)
+    manager.dodaj_pomiar("BAT-01", 50.0)
+    manager.dodaj_pomiar("BAT-02", 32.5)
+    manager.dodaj_pomiar("BAT-02", 68.1)
+    manager.dodaj_pomiar("BAT-03", 50.0)
+
+    historia_pomiar = manager.pobierz_historie_baterii("BAT-01")
+    przegrzane_logi = manager.pobierz_przegrzane()
+
+    if przegrzane_logi:
+        for log in przegrzane_logi:
+            print(log)
+
+    if historia_pomiar:
+        for one in historia_pomiar:
+            print(one)
+
