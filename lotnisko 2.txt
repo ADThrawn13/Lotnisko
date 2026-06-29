@@ -1,0 +1,121 @@
+import json
+
+class Lot: 
+    def __init__(self, numer_lotu, linia_lotnicza, kierunek, 
+                 typ_operacji, planowana_godzina, opoznienie=0, status="Planowany"): 
+        self.numer_lotu = numer_lotu 
+        self.linia_lotnicza = linia_lotnicza 
+        self.kierunek = kierunek 
+        self.typ_operacji = typ_operacji  # Przylot / Odlot 
+        self.planowana_godzina = planowana_godzina 
+        self.opoznienie = opoznienie 
+        self.status = status 
+  
+    def __str__(self): 
+        return (f"{self.numer_lotu} | {self.linia_lotnicza} | " 
+                f"{self.kierunek} | {self.typ_operacji} | " 
+                f"{self.planowana_godzina} | " 
+                f"OpóŸnienie: {self.opoznienie} min | " 
+                f"Status: {self.status}") 
+  
+class MenedzerLotniska: 
+    def __init__(self): 
+        self.loty = [] 
+  
+    def dodaj_lot(self, lot): 
+        self.loty.append(lot) 
+  
+    def aktualizuj_opoznienie(self, numer_lotu, minuty): 
+        for lot in self.loty: 
+            if lot.numer_lotu == numer_lotu: 
+                lot.opoznienie = minuty 
+                if minuty > 0: 
+                    lot.status = "OpóŸniony" 
+                else: 
+                    lot.status = "Planowany" 
+                return True 
+        return False 
+  
+    def oblicz_srednie_opoznienie(self, linia_lotnicza): 
+        opoznienia = [ 
+            lot.opoznienie 
+            for lot in self.loty 
+            if lot.linia_lotnicza == linia_lotnicza 
+        ] 
+  
+        if len(opoznienia) == 0: 
+            return 0 
+  
+        return sum(opoznienia) / len(opoznienia) 
+  
+    def pobierz_statystyki_operacji(self): 
+        statystyki = { 
+           "Przylot": 0, 
+           "Odlot": 0 
+        } 
+  
+        for lot in self.loty: 
+            if lot.typ_operacji in statystyki: 
+                statystyki[lot.typ_operacji] += 1 
+  
+        return statystyki 
+  
+    def wyswietl_loty(self): 
+        for lot in self.loty: 
+            print(lot)
+
+    def zapisz_do_json(self, nazwa_pliku="loty.json"):
+        dane = [lot.__dict__ for lot in self.loty]
+        with open(nazwa_pliku, "w", encoding="utf-8") as plik:
+            json.dump(dane, plik, ensure_ascii=False, indent=4)
+        print(f"Zapisano dane do pliku: {nazwa_pliku}")
+
+    def wczytaj_z_json(self, nazwa_pliku="loty.json"):
+        try:
+            with open(nazwa_pliku, "r", encoding="utf-8") as plik:
+                dane = json.load(plik)
+                self.loty = []
+                for item in dane:
+                    lot = Lot(
+                        numer_lotu=item["numer_lotu"],
+                        linia_lotnicza=item["linia_lotnicza"],
+                        kierunek=item["kierunek"],
+                        typ_operacji=item["typ_operacji"],
+                        planowana_godzina=item["planowana_godzina"],
+                        opoznienie=item["opoznienie"],
+                        status=item["status"]
+                    )
+                    self.loty.append(lot)
+            print(f"Wczytano dane z pliku: {nazwa_pliku}")
+        except FileNotFoundError:
+            print(f"Plik {nazwa_pliku} nie istnieje.")
+
+if __name__ == "__main__": 
+    manager = MenedzerLotniska() 
+  
+    lot1 = Lot("LH1342", "Lufthansa", "Berlin", "Przylot", "14:30") 
+    lot2 = Lot("LO281", "LOT", "Warszawa", "Odlot", "15:20") 
+    lot3 = Lot("FR501", "Ryanair", "Londyn", "Przylot", "16:10") 
+  
+    manager.dodaj_lot(lot1) 
+    manager.dodaj_lot(lot2) 
+    manager.dodaj_lot(lot3) 
+  
+    manager.aktualizuj_opoznienie("LH1342", 25) 
+  
+    print("Lista lotów:") 
+    manager.wyswietl_loty() 
+  
+    print("\nŒrednie opóŸnienie Lufthansa:") 
+    print(manager.oblicz_srednie_opoznienie("Lufthansa")) 
+  
+    print("\nStatystyki operacji:") 
+    print(manager.pobierz_statystyki_operacji()) 
+    
+    manager.zapisz_do_json("lotnisko.json")
+    
+    nowy_manager = MenedzerLotniska()
+    nowy_manager.wczytaj_z_json("lotnisko.json")
+    
+    print("\nLista lotów po wczytaniu z JSON:")
+    nowy_manager.wyswietl_loty()
